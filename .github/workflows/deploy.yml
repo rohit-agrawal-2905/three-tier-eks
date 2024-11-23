@@ -1,0 +1,38 @@
+name: Deploy to EKS with ArgoCD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up AWS CLI
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-west-2
+
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v1
+
+    - name: Set up Helm
+      uses: azure/setup-helm@v1
+
+    - name: Install Helm dependencies
+      run: helm dependency update ./charts/hello-world
+
+    - name: Deploy with Helm
+      run: helm upgrade --install hello-world ./charts/hello-world --namespace default
+
+    - name: Sync ArgoCD Application
+      run: |
+        argocd app sync hello-world-app
+        argocd app wait hello-world-app --sync
