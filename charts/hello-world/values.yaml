@@ -1,11 +1,46 @@
-replicaCount: 1
+# values.yaml for Three-Tier Application
 
-image:
-  repository: nginx
-  tag: stable
-  pullPolicy: IfNotPresent
+frontend:
+  replicaCount: 1  # Number of replicas for the frontend (Nginx)
+  image: "nginx:latest"  # Frontend image (Nginx)
+  service:
+    type: LoadBalancer  # Expose the frontend service with LoadBalancer
 
-service:
-  type: LoadBalancer
-  port: 80
+backend:
+  replicaCount: 1  # Number of replicas for the backend (Node.js)
+  image: "your-backend-image"  # Replace with your actual backend Docker image
+  ports:
+    containerPort: 5000  # Port where the backend service will run
+  env:
+    DB_HOST: "mysql.default.svc.cluster.local"  # MySQL DNS for communication
+    DB_PORT: 3306  # MySQL port
+    DB_USER: "root"  # MySQL root user (use a more secure user in production)
+    DB_PASSWORD: "password"  # MySQL root password (secure this in production)
+    DB_NAME: "mydb"  # Name of the database to connect to
 
+mysql:
+  # MySQL configuration using Bitnami chart
+  rootPassword: "password"  # Root password for MySQL (use a more secure password in production)
+  database: "mydb"  # The database to be created on MySQL deployment
+
+  # Enable StatefulSet
+  statefulSet:
+    enabled: true  # Deploy MySQL as StatefulSet
+    replicas: 1  # Number of MySQL replicas
+
+  # Persistence configuration for MySQL
+  persistence:
+    enabled: true  # Enable persistence
+    size: 8Gi  # Size of the persistent volume
+    storageClass: "gp2"  # AWS EBS storage class (adjust based on your environment)
+
+  # Configure the MySQL service (statefulSet will create this service)
+  service:
+    type: ClusterIP  # MySQL service exposed within the cluster
+
+  # Configure MySQL configuration (optional)
+  configurationFiles:
+    my.cnf: |
+      [mysqld]
+      skip-host-cache
+      skip-name-resolve
